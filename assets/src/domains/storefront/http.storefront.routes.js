@@ -37,11 +37,11 @@ module.exports = function(context, callback) {
     var message = {
       "text": xFilter(body.message),
       "subject": xFilter(body.subject),
-      "from_email": xFilter(body.email),
+      "from_email": 'contact_us@redington.com',
       "from_name": xFilter(body.firstName) + " " + xFilter(body.lastName),
       "to":[{
         // "email": xFilter(body.department)
-        "email": "dmcgough@farbank.com",
+        "email": "mcgough.dan@gmail.com",
         "type": "to"
       }],
       "headers": {
@@ -49,36 +49,29 @@ module.exports = function(context, callback) {
       }
     };
 
-    var params = {
-      "key": "My key here",
-      "message": message,
-      "async": true
-    };
-    var obj = {
-      "hello": "is anyone out there?"
+    var mandrillParams = {
+      "key": "",
+      "message": message
     };
 
     var url = "https://mandrillapp.com/api/1.0/messages/send.json";
-    var ngUrl = "https://8d3631df.ngrok.io";
-    try {
 
-      needle.post(ngUrl, obj, function(error,response) {
+    try {
+      needle.post(url, mandrillParams, function(error,response) {
         if(!error && response.statusCode == 200) {
-          console.log('success:', obj);
+          console.log('success:', params);
           context.response.end();
         }else{
-          console.log('fail');
+          console.log('fail', response.statusCode);
           context.response.end();
         }
       });
-
     }catch(err) {
       console.log(err);
       context.response.end();
     }
 
   }else {
-    console.log('not post');
     context.response.end();
   }
 };

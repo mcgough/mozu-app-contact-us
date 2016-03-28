@@ -2,12 +2,12 @@
   "exports": [
     {
       "id": "embedded.platform.applications.install",
-      "virtualPath": "./dist\\platform.applications.manifest.all.js",
+      "virtualPath": "./dist/platform.applications.manifest.all.js",
       "actionId": "embedded.platform.applications.install"
     },
     {
       "id": "contact_us",
-      "virtualPath": "./dist\\storefront.manifest.all.js",
+      "virtualPath": "./dist/storefront.manifest.all.js",
       "actionId": "http.storefront.routes"
     }
   ]

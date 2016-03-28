@@ -22,6 +22,7 @@
 
  */
 var needle = require('needle');
+// var request = require('request');
 var xssFilters = require('xss-filters');
 
 function xFilter(input) {
@@ -38,11 +39,11 @@ module.exports = function(context, callback) {
     var message = {
       "text": xFilter(body.message),
       "subject": xFilter(body.subject),
-      "from_email": xFilter(body.email),
+      "from_email": 'contact@redington.com',
       "from_name": xFilter(body.firstName) + " " + xFilter(body.lastName),
       "to":[{
         // "email": xFilter(body.department)
-        "email": "dmcgough@farbank.com",
+        "email": "mcgough.dan@gmail.com",
         "type": "to"
       }],
       "headers": {
@@ -51,24 +52,24 @@ module.exports = function(context, callback) {
     };
 
     var params = {
-      "key": "My key here",
-      "message": message,
-      "async": true
+      "key": "pf6UMBYZZKUoJizpbsAFww",
+      "message": message
     };
+
     var obj = {
       "hello": "is anyone out there?"
     };
 
     var url = "https://mandrillapp.com/api/1.0/messages/send.json";
-    var ngUrl = "https://8d3631df.ngrok.io";
+    var ngUrl = "https://45eff106.ngrok.io";
     try {
 
-      needle.post(ngUrl, obj, function(error,response) {
+      needle.post(url, params, function(error,response) {
         if(!error && response.statusCode == 200) {
-          console.log('success:', obj);
+          console.log('success:', params);
           context.response.end();
         }else{
-          console.log('fail');
+          console.log('fail', response.statusCode);
           context.response.end();
         }
       });
@@ -752,14 +753,18 @@ module.exports = {
 //
 
 // RegExps
-const COOKIE_PAIR        = /^([^=\s]+)\s*=\s*("?)\s*(.*)\s*\2\s*$/;
-const EXCLUDED_CHARS     = /[\x00-\x1F\x7F\x3B\x3B\s\"\,\\"%]/g;
-const TRAILING_SEMICOLON = /\x3B+$/;
-const SEP_SEMICOLON      = /\s*\x3B\s*/;
+
+var COOKIE_PAIR = /^([^=\s]+)\s*=\s*("?)\s*(.*)\s*\2\s*$/;
+var EXCLUDED_CHARS = /[\x00-\x1F\x7F\x3B\x3B\s\"\,\\"%]/g;
+var TRAILING_SEMICOLON = /\x3B+$/;
+var SEP_SEMICOLON = /\s*\x3B\s*/;
 
 // Constants
-const KEY_INDEX   = 1; // index of key from COOKIE_PAIR match
-const VALUE_INDEX = 3; // index of value from COOKIE_PAIR match
+
+var KEY_INDEX = 1; // index of key from COOKIE_PAIR match
+var VALUE_INDEX = 3; // index of value from COOKIE_PAIR match
+
+// Convenience functions
 
 // Returns a copy str trimmed and without trainling semicolon.
 function cleanCookieString(str) {
@@ -770,6 +775,8 @@ function getFirstPair(str) {
   var index = str.indexOf('\x3B');
   return index === -1 ? str : str.substr(0, index);
 }
+
+// Private functions
 
 // Returns a encoded copy of str based on RFC6265 S4.1.1.
 function encodeCookieComponent(str) {
@@ -782,22 +789,21 @@ function parseSetCookieString(str) {
   str = getFirstPair(str);
 
   var res = COOKIE_PAIR.exec(str);
-  if (!res || !res[VALUE_INDEX]) return null;
 
   return {
-    name  : decodeURIComponent(res[KEY_INDEX]),
-    value : decodeURIComponent(res[VALUE_INDEX])
+    name: decodeURIComponent(res[KEY_INDEX]),
+    value: decodeURIComponent(res[VALUE_INDEX])
   };
 }
 
-// Parses a set-cookie-header and returns a key/value object.
-// Each key represents the name of a cookie.
+// Parses a set-cookie-header and returns a key/value object. Each key
+// represent a name of a cookie.
 function parseSetCookieHeader(header) {
   header = (header instanceof Array) ? header : [header];
 
   return header.reduce(function(res, str) {
     var cookie = parseSetCookieString(str);
-    if (cookie) res[cookie.name] = cookie.value;
+    res[cookie.name] = cookie.value;
     return res;
   }, {});
 }
@@ -805,18 +811,21 @@ function parseSetCookieHeader(header) {
 // Writes a set-cookie-string based on the standard definded in RFC6265 S4.1.1.
 function writeCookieString(obj) {
   return Object.keys(obj).reduce(function(str, name) {
-    var encodedName  = encodeCookieComponent(name);
+    var encodedName = encodeCookieComponent(name);
     var encodedValue = encodeCookieComponent(obj[name]);
-    str += (str ? '; ' : '') + encodedName + '=' + encodedValue;
+    str += (str ? "; " : "") + encodedName + '=' + encodedValue;
     return str;
-  }, '');
+  }, "");
 }
+
+// Module interface
 
 // returns a key/val object from an array of cookie strings
 exports.read = parseSetCookieHeader;
 
 // writes a cookie string header
 exports.write = writeCookieString;
+
 },{}],8:[function(require,module,exports){
 var iconv,
     inherits  = require('util').inherits,
@@ -878,7 +887,7 @@ var readFile = require('fs').readFile,
 
 exports.build = function(data, boundary, callback) {
 
-  if (typeof data != 'object' || typeof data.pipe == 'function')
+  if (typeof data != 'object')
     return callback(new Error('Multipart builder expects data as key/val object.'));
 
   var body   = '',
@@ -1000,12 +1009,7 @@ var version     = require('../package.json').version;
 var user_agent  = 'Needle/' + version;
 user_agent     += ' (Node.js ' + process.version + '; ' + process.platform + ' ' + process.arch + ')';
 
-var tls_options = 'agent pfx key passphrase cert ca ciphers rejectUnauthorized secureProtocol checkServerIdentity';
-
-// older versions of node (< 0.11.4) prevent the runtime from exiting
-// because of connections in keep-alive state. so if this is the case
-// we'll default new requests to set a Connection: close header.
-var close_by_default = !http.Agent || http.Agent.defaultMaxSockets != Infinity;
+var tls_options = 'agent pfx key passphrase cert ca ciphers rejectUnauthorized secureProtocol';
 
 //////////////////////////////////////////
 // decompressors for gzip/deflate bodies
@@ -1034,6 +1038,7 @@ var defaults = {
 
   // headers
   accept                  : '*/*',
+  connection              : 'close',
   user_agent              : user_agent,
 
   // numbers
@@ -1157,12 +1162,9 @@ Needle.prototype.setup = function(uri, options) {
 
   config.headers = {
     'Accept'     : options.accept     || defaults.accept,
+    'Connection' : options.connection || defaults.connection,
     'User-Agent' : options.user_agent || defaults.user_agent
   }
-
-  // set connection header if opts.connection was passed, or if node < 0.11.4 (close)
-  if (options.connection || close_by_default)
-    config.headers['Connection'] = options.connection || 'close';
 
   if ((options.compressed || defaults.compressed) && typeof zlib != 'undefined')
     config.headers['Accept-Encoding'] = 'gzip,deflate';
@@ -1211,7 +1213,8 @@ Needle.prototype.setup = function(uri, options) {
 
 Needle.prototype.start = function() {
 
-  var out      = new stream.PassThrough({ objectMode: false }),
+  var self     = this,
+      out      = new stream.PassThrough({ objectMode: false }),
       uri      = this.uri,
       data     = this.data,
       method   = this.method,
@@ -1222,65 +1225,53 @@ Needle.prototype.start = function() {
   if (uri.indexOf('http') === -1)
     uri = uri.replace(/^(\/\/)?/, 'http://');
 
-  var body, config = this.setup(uri, options);
+  var config = this.setup(uri, options);
 
   if (data) {
+    if (method.toUpperCase() == 'GET') { // build query string and append to URI
 
-    if (options.multipart) { // boss says we do multipart. so we do it.
+      uri  = uri.replace(/\?.*|$/, '?' + stringify(data));
+      post_data = null;
 
-      var self = this, boundary = options.boundary || defaults.boundary;
+    } else if (options.multipart) { // build multipart body for request
 
-      multipart.build(data, boundary, function(err, parts) {
+      var boundary = options.boundary || defaults.boundary;
+
+      multipart.build(data, boundary, function(err, body) {
         if (err) throw(err);
 
         config.headers['Content-Type']   = 'multipart/form-data; boundary=' + boundary;
-        config.headers['Content-Length'] = parts.length;
-        self.send_request(1, method, uri, config, parts, out, callback);
+        config.headers['Content-Length'] = body.length;
+        self.send_request(1, method, uri, config, body, out, callback);
       });
 
       return out; // stream
 
     } else if (is_stream(data) || Buffer.isBuffer(data)) {
 
-      if (is_stream(data) && method.toUpperCase() == 'GET')
-        throw new Error('Refusing to pipe() a stream via GET. Did you mean .post?');
-
-      body = data; // use the raw buffer or stream as request body.
-
-    } else if (method.toUpperCase() == 'GET' && !options.json) {
-
-      // append the data to the URI as a querystring.
-      uri = uri.replace(/\?.*|$/, '?' + stringify(data));
+      post_data = data;
 
     } else { // string or object data, no multipart.
 
-      // if string, leave it as it is, otherwise, stringify.
-      body = (typeof(data) === 'string') ? data
-             : options.json ? JSON.stringify(data) : stringify(data);
+      // if no content-type was passed, determine if json or not.
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = options.json
+        ? 'application/json; charset=utf-8'
+        : 'application/x-www-form-urlencoded'; // no charset says W3 spec.
+      }
 
-      // ensure we have a buffer so bytecount is correct.
-      body = new Buffer(body, config.encoding);
+      // format post_data and build a buffer out of it.
+      var post_data = options.json ? JSON.stringify(data) : stringify(data);
+      post_data     = new Buffer(post_data, config.encoding);
+      config.headers['Content-Length'] = post_data.length;
+
+      // unless a specific accept header was passed, assume json wants json back.
+      if (options.json && config.headers['Accept'] === defaults.accept)
+        config.headers['Accept'] = 'application/json';
     }
-
   }
 
-  if (body) { 
-    // unless we have a stream or set a querystring, set the content length.
-    if (body.length) config.headers['Content-Length'] = body.length;
-
-    // if no content-type was passed, determine if json or not.
-    if (!config.headers['Content-Type']) {
-      config.headers['Content-Type'] = options.json
-      ? 'application/json; charset=utf-8'
-      : 'application/x-www-form-urlencoded'; // no charset says W3 spec.
-    }
-
-    // unless a specific accept header was passed, assume json wants json back.
-    if (options.json && config.headers['Accept'] === defaults.accept)
-      config.headers['Accept'] = 'application/json';
-  }
-
-  return this.send_request(1, method, uri, config, body, out, callback);
+  return this.send_request(1, method, uri, config, post_data, out, callback);
 }
 
 Needle.prototype.get_request_opts = function(method, uri, config) {
@@ -1340,17 +1331,15 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
       protocol     = request_opts.protocol == 'https:' ? https : http;
 
   function done(err, resp, body) {
-    if (returned++ > 0)
-      return debug('Already finished, stopping here.');
+    if (returned++ > 0) return;
 
     if (timer) clearTimeout(timer);
     request.removeListener('error', had_error);
-    request.socket.removeListener('end', on_socket_end);
 
     if (callback)
-      return callback(err, resp, body);
-
-    out.emit('end', err, resp, body);
+      callback(err, resp, body);
+    else
+      out.emit('end', err, resp, body);
   }
 
   function had_error(err) {
@@ -1361,16 +1350,6 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
   function set_timeout(milisecs) {
     if (milisecs <= 0) return;
     timer = setTimeout(function() { request.abort() }, milisecs);
-  }
-
-  // handle errors on the underlying socket, that may be closed while writing
-  // for an example case, see test/long_string_spec.js. we make sure this 
-  // scenario ocurred by verifying the socket's writable & destroyed states.
-  function on_socket_end() { 
-    if (!this.writable && this.destroyed === false) {
-      this.destroy();
-      had_error(new Error('Remote end closed socket abruptly.'))
-    }
   }
 
   debug('Making request #' + count, request_opts);
@@ -1405,7 +1384,7 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
           config.headers['Cookie'] = cookies.write(resp.cookies);
 
         if (config.follow_set_referer)
-          config.headers['Referer'] = uri; // the original, not the destination URL.
+          config.headers['Referer'] = uri;
 
         config.headers['Host'] = null; // clear previous Host header to avoid conflicts.
 
@@ -1416,7 +1395,7 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
       }
     }
 
-    // if auth is requested and credentials were not passed, resend request, provided we have user/pass.
+    // if authentication is requested and credentials were not passed, resend request if we have user/pass
     if (resp.statusCode == 401 && headers['www-authenticate'] && config.credentials) {
       if (!config.headers['Authorization']) { // only if authentication hasn't been sent
         var auth_header = auth.header(headers['www-authenticate'], config.credentials, request_opts);
@@ -1428,7 +1407,7 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
       }
     }
 
-    // ok, so we got a valid (non-redirect & authorized) response. let's notify the stream guys.
+    // ok so we got a valid (non-redirect & authorized) response. notify the stream guys.
     out.emit('header', resp.statusCode, headers);
     out.emit('headers', headers);
 
@@ -1498,7 +1477,7 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
       resp.body  = [];
       resp.bytes = 0;
 
-      // Gather and count the amount of (raw) bytes using a PassThrough stream.
+      // Count the amount of (raw) bytes passed using a PassThrough stream.
       var clean_pipe = new stream.PassThrough();
       resp.pipe(clean_pipe);
 
@@ -1524,7 +1503,7 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
 
       // And set the .body property once all data is in.
       out.on('end', function() {
-        // we want to be able to access to the raw data later, so keep a reference.
+        // we may want access to the raw data, so keep a reference.
         resp.raw = Buffer.concat(resp.raw);
 
         // if parse was successful, we should have an array with one object
@@ -1554,16 +1533,9 @@ Needle.prototype.send_request = function(count, method, uri, config, post_data, 
 
   }); // end request call
 
-  // unless open_timeout was disabled, set a timeout to abort the request.
+  // unless timeout was disabled, set a timeout to abort the request
   set_timeout(config.open_timeout);
-
-  // handle errors on the request object. things might get bumpy.
   request.on('error', had_error);
-
-  // handle socket 'end' event to ensure we don't get delayed EPIPE errors.
-  request.once('socket', function(socket) {
-    socket.once('end', on_socket_end.bind(socket));
-  })
 
   if (post_data) {
     if (is_stream(post_data)) {
@@ -5612,19 +5584,15 @@ IconvLiteDecoderStream.prototype.collect = function(cb) {
 module.exports={
   "_args": [
     [
-      "needle",
-      "c:\\Users\\dmcgough\\Documents\\Farbank\\themes\\apps\\contact_us"
+      "needle@^0.11.0",
+      "/Users/danmcgough1/farbank/redington-mozu-contact-us/node_modules/mozu-metadata"
     ]
   ],
-  "_from": "needle@*",
-  "_id": "needle@1.0.0",
+  "_from": "needle@>=0.11.0 <0.12.0",
+  "_id": "needle@0.11.0",
   "_inCache": true,
   "_installable": true,
   "_location": "/needle",
-  "_npmOperationalInternal": {
-    "host": "packages-5-east.internal.npmjs.com",
-    "tmp": "tmp/needle-1.0.0.tgz_1454447539067_0.691312288865447"
-  },
   "_npmUser": {
     "email": "tomas@forkhq.com",
     "name": "tomas"
@@ -5633,20 +5601,20 @@ module.exports={
   "_phantomChildren": {},
   "_requested": {
     "name": "needle",
-    "raw": "needle",
-    "rawSpec": "",
+    "raw": "needle@^0.11.0",
+    "rawSpec": "^0.11.0",
     "scope": null,
-    "spec": "*",
+    "spec": ">=0.11.0 <0.12.0",
     "type": "range"
   },
   "_requiredBy": [
-    "#USER"
+    "/mozu-metadata"
   ],
-  "_resolved": "https://registry.npmjs.org/needle/-/needle-1.0.0.tgz",
-  "_shasum": "24e9c776095cad2d8c40ae6e76600adba05f613f",
+  "_resolved": "https://registry.npmjs.org/needle/-/needle-0.11.0.tgz",
+  "_shasum": "02a71b008eaf7d55ae89fb9fd7685b7b88d7bc29",
   "_shrinkwrap": null,
-  "_spec": "needle",
-  "_where": "c:\\Users\\dmcgough\\Documents\\Farbank\\themes\\apps\\contact_us",
+  "_spec": "needle@^0.11.0",
+  "_where": "/Users/danmcgough1/farbank/redington-mozu-contact-us/node_modules/mozu-metadata",
   "author": {
     "email": "tomas@forkhq.com",
     "name": "Tomás Pollak"
@@ -5675,13 +5643,13 @@ module.exports={
     "lib": "./lib"
   },
   "dist": {
-    "shasum": "24e9c776095cad2d8c40ae6e76600adba05f613f",
-    "tarball": "http://registry.npmjs.org/needle/-/needle-1.0.0.tgz"
+    "shasum": "02a71b008eaf7d55ae89fb9fd7685b7b88d7bc29",
+    "tarball": "http://registry.npmjs.org/needle/-/needle-0.11.0.tgz"
   },
   "engines": {
     "node": ">= 0.10.x"
   },
-  "gitHead": "5f194b929cb0adbaccc41dcb01ee5e51e338cf7d",
+  "gitHead": "f0fb9a2b7bebeebe5530b16e82af0570d17323f4",
   "homepage": "https://github.com/tomas/needle",
   "keywords": [
     "charset",
@@ -5733,7 +5701,7 @@ module.exports={
     "timeout",
     "upload"
   ],
-  "version": "1.0.0"
+  "version": "0.11.0"
 }
 
 },{}],35:[function(require,module,exports){
